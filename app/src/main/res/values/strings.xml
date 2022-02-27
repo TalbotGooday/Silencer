@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Silencer</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="starting">Хуячимо</string>
+    <string name="working_on">Хуячимо: %s</string>
+    <string name="stop">Зупинити</string>
+    <string name="input_hint">Скопіюйте текст з посиланнями на ворожі ресурси, вставте сюди та нажміть кнопку.
+        \nВсі посилання будуть знайдені автоматично та віджарені по перше число тобою та іншими учасниками.
+        \n
+        \nДодаток можна згорнути, а телефон можна кинути в карман
+        \n
+        \nУвага! Додаток жере батарею та інтернет
+        \n
+        \nДякую Вам!
+        \n
+        \nСЛАВА УКРАЇНІ!</string>
+    <string name="button_start">Примусити мовчати</string>
+    <string name="done">Гарна робота!\nЗнайди ще більше ворожих сайтів і почнемо спочатку!</string>
+    <string name="version">Версія: %s</string>
+    <string name="error_addresses">Сайти не знайдені</string>
+</resources>
