@@ -15,6 +15,7 @@ import ua.silencer.MainActivity
 import ua.silencer.R
 import ua.silencer.ui.status.StatusActivity
 import java.io.InterruptedIOException
+import java.net.ConnectException
 import java.util.concurrent.TimeUnit
 
 
@@ -156,7 +157,7 @@ class SilencerService : Service() {
                 sendStatus(fixedUrl, true)
             }
         } catch (e: Exception) {
-            if (e is InterruptedIOException) {
+            if (e is InterruptedIOException || e is ConnectException) {
                 addressesDown.add(url)
                 sendStatus(fixedUrl, false)
             }
