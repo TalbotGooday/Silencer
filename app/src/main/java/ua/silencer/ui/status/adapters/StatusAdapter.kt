@@ -94,6 +94,9 @@ class StatusAdapter(private val listener: Listener) : RecyclerView.Adapter<Statu
 
             setLastUpdated(isUpdatingNow)
 
+            indicator.setOnClickListener {
+                listener.onItemStatusClick(item)
+            }
             root.setOnClickListener {
                 listener.onItemClick(item)
             }
@@ -117,12 +120,13 @@ class StatusAdapter(private val listener: Listener) : RecyclerView.Adapter<Statu
                 DOWN -> Color.RED
             }
 
-            indicator.colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
+            indicatorIcon.colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
         }
     }
 
     interface Listener {
         fun onItemClick(item: AddressModel)
+        fun onItemStatusClick(item: AddressModel)
     }
 
     data class AddressModel(

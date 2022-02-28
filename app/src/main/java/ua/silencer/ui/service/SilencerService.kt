@@ -38,27 +38,26 @@ class SilencerService : Service() {
     private inner class ServiceHandler(looper: Looper) : Handler(looper) {
 
         override fun handleMessage(msg: Message) {
-            // Normally we would do some work here, like download a file.
-            // For our sample, we just sleep for 5 seconds.
             try {
                 val addressesCopy = ArrayList(addresses)
 
                 while (isRunning) {
                     addressesCopy.forEach { address ->
-                        if (addressesDown.contains(address).not()) {
-                            post(address)
-                        }
+                        // TODO ADD THIS TO THE SETTINGS
+                        // if (addressesDown.contains(address).not()) {
+                        //    post(address)
+                        // }
+                        post(address)
                     }
 
-                    isRunning = addressesDown.size != addressesCopy.size
+                    // TODO ADD THIS TO THE SETTINGS
+                    // isRunning = addressesDown.size != addressesCopy.size
                 }
             } catch (e: InterruptedException) {
                 // Restore interrupt status.
                 Thread.currentThread().interrupt()
             }
 
-            // Stop the service using the startId, so that we don't stop
-            // the service in the middle of handling another job
             sendStopEvent()
             stopSelf(msg.arg1)
         }

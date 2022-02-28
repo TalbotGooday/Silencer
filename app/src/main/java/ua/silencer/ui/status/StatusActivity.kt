@@ -105,7 +105,21 @@ class StatusActivity : AppCompatActivity() {
             override fun onItemClick(item: StatusAdapter.AddressModel) {
                 openLink(item.address)
             }
+
+            override fun onItemStatusClick(item: StatusAdapter.AddressModel) {
+                onStatusClick(item)
+            }
         })
+    }
+
+    private fun onStatusClick(item: StatusAdapter.AddressModel) {
+        val message = when(item.status){
+            StatusAdapter.Status.UNKNOWN -> R.string.status_unknown
+            StatusAdapter.Status.ACTIVE -> R.string.status_active
+            StatusAdapter.Status.DOWN -> R.string.status_down
+        }
+
+        Toast.makeText(this, getString(message), Toast.LENGTH_SHORT).show()
     }
 
     private fun openLink(item: String) {
