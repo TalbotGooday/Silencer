@@ -14,14 +14,19 @@ import okhttp3.*
 import ua.silencer.MainActivity
 import ua.silencer.R
 import ua.silencer.ui.status.StatusActivity
+import ua.silencer.utils.ServerException
 import java.io.InterruptedIOException
 import java.net.ConnectException
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 
 class SilencerService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 9083110
+        private const val NUMBER_OF_CORES = 5
+
         private const val STOP_ACTION = "stop_silencer"
 
         const val SILENCER_EVENT = "SILENCER_EVENT"
@@ -33,42 +38,36 @@ class SilencerService : Service() {
     private val addresses = mutableListOf<String>()
     private val addressesDown = mutableSetOf<String>()
 
-    private var serviceLooper: Looper? = null
-    private var serviceHandler: ServiceHandler? = null
+    private val client = createClient()
 
-    private inner class ServiceHandler(looper: Looper) : Handler(looper) {
+    private var executor: ThreadPoolExecutor? = null
 
-        override fun handleMessage(msg: Message) {
-            try {
-                val addressesCopy = ArrayList(addresses)
+    private val silenceRunnable = Runnable {
+        try {
+            val addressesCopy = ArrayList(addresses)
 
-                while (isRunning) {
-                    addressesCopy.forEach { address ->
+            while (isRunning) {
+                addressesCopy.forEach { address ->
+                    if (isRunning) {
                         // TODO ADD THIS TO THE SETTINGS
-                        // if (addressesDown.contains(address).not()) {
-                        //    post(address)
-                        // }
-                        post(address)
+                        if (addressesDown.contains(address).not()) {
+                            post(address)
+                        }
                     }
-
-                    // TODO ADD THIS TO THE SETTINGS
-                    // isRunning = addressesDown.size != addressesCopy.size
                 }
-            } catch (e: InterruptedException) {
-                // Restore interrupt status.
-                Thread.currentThread().interrupt()
-            }
 
-            sendStopEvent()
-            stopSelf(msg.arg1)
+                // TODO ADD THIS TO THE SETTINGS
+                // isRunning = addressesDown.size != addressesCopy.size
+            }
+        } catch (e: InterruptedException) {
+            // Restore interrupt status.
+            Thread.currentThread().interrupt()
         }
     }
 
-    private val client = createClient()
-
     private fun createClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .callTimeout(500L, TimeUnit.MILLISECONDS)
+            .callTimeout(200L, TimeUnit.MILLISECONDS)
             .build()
     }
 
@@ -83,8 +82,8 @@ class SilencerService : Service() {
 
         if (intent?.action == STOP_ACTION || elements.isEmpty()) {
             isRunning = false
-            serviceHandler?.removeCallbacksAndMessages(null)
-            serviceHandler = null
+            executor?.shutdown()
+            executor = null
 
             stopSelf()
             sendStopEvent()
@@ -99,20 +98,19 @@ class SilencerService : Service() {
 
         Log.d("Silencer", addresses.joinToString("\n"))
 
-        HandlerThread("ServiceStartArguments", THREAD_PRIORITY_BACKGROUND).apply {
-            start()
-
-            // Get the HandlerThread's Looper and use it for our Handler
-            serviceLooper = looper
-            serviceHandler = ServiceHandler(looper)
+        executor = ThreadPoolExecutor(
+            NUMBER_OF_CORES,
+            NUMBER_OF_CORES,
+            1L,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue()
+        ).also { executor ->
+            repeat(NUMBER_OF_CORES) {
+                executor.execute(silenceRunnable)
+            }
         }
 
         isRunning = true
-
-        serviceHandler?.obtainMessage()?.also { msg ->
-            msg.arg1 = startId
-            serviceHandler?.sendMessage(msg)
-        }
 
         return START_STICKY
     }
@@ -120,6 +118,9 @@ class SilencerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+
+        executor?.shutdown()
+        executor = null
     }
 
     private fun post(url: String) {
@@ -151,13 +152,17 @@ class SilencerService : Service() {
         try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    sendStatus(fixedUrl, true)
+                    if (response.code in 500..599) {
+                        throw ServerException()
+                    } else {
+                        sendStatus(fixedUrl, true)
+                    }
                 }
 
                 sendStatus(fixedUrl, true)
             }
         } catch (e: Exception) {
-            if (e is InterruptedIOException || e is ConnectException) {
+            if (e is InterruptedIOException || e is ConnectException || e is ServerException) {
                 addressesDown.add(url)
                 sendStatus(fixedUrl, false)
             }
