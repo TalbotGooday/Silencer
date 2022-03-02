@@ -1,17 +1,16 @@
 package ua.silencer.ui.service
 
 import android.app.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
-import android.net.Uri
 import android.os.*
-import android.os.Process.THREAD_PRIORITY_BACKGROUND
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import okhttp3.*
-import ua.silencer.MainActivity
 import ua.silencer.R
 import ua.silencer.ui.status.StatusActivity
 import ua.silencer.utils.ServerException
@@ -29,7 +28,8 @@ class SilencerService : Service() {
 
         private const val STOP_ACTION = "stop_silencer"
 
-        const val SILENCER_EVENT = "SILENCER_EVENT"
+        const val SILENCER_EVENT_OUT = "SILENCER_EVENT_OUT"
+        const val SILENCER_EVENT_IN = "SILENCER_EVENT_IN"
 
         const val EVENT_STOP = "stop"
         const val EVENT_MESSAGE = "message"
@@ -41,6 +41,7 @@ class SilencerService : Service() {
     private val client = createClient()
 
     private var executor: ThreadPoolExecutor? = null
+    private val silencerMessageReceiver = createStatusReceiver()
 
     private val silenceRunnable = Runnable {
         try {
@@ -50,9 +51,10 @@ class SilencerService : Service() {
                 addressesCopy.forEach { address ->
                     if (isRunning) {
                         // TODO ADD THIS TO THE SETTINGS
-                        if (addressesDown.contains(address).not()) {
-                            post(address)
-                        }
+                        // if (addressesDown.contains(address).not()) {
+                        //    post(address)
+                        //}
+                        post(address)
                     }
                 }
 
@@ -110,6 +112,8 @@ class SilencerService : Service() {
             }
         }
 
+        registerReceiver(silencerMessageReceiver, IntentFilter(SILENCER_EVENT_IN))
+
         isRunning = true
 
         return START_STICKY
@@ -121,19 +125,14 @@ class SilencerService : Service() {
 
         executor?.shutdown()
         executor = null
+        unregisterReceiver(silencerMessageReceiver)
     }
 
     private fun post(url: String) {
-        val fixedUrl = url.let {
-            if (url.startsWith("http").not()) {
-                "http://$url"
-            } else url
-        }
-
-        updateNotification(fixedUrl)
+        updateNotification(url)
 
         val request = Request.Builder()
-            .url(fixedUrl)
+            .url(url)
             .addHeader("User-Agent", "Mozilla/5.0")
             .addHeader(
                 "Accept",
@@ -155,16 +154,16 @@ class SilencerService : Service() {
                     if (response.code in 500..599) {
                         throw ServerException()
                     } else {
-                        sendStatus(fixedUrl, true)
+                        sendStatus(url, true)
                     }
                 }
 
-                sendStatus(fixedUrl, true)
+                sendStatus(url, true)
             }
         } catch (e: Exception) {
             if (e is InterruptedIOException || e is ConnectException || e is ServerException) {
                 addressesDown.add(url)
-                sendStatus(fixedUrl, false)
+                sendStatus(url, false)
             }
         }
     }
@@ -244,7 +243,7 @@ class SilencerService : Service() {
 
     private fun sendStatus(url: String, isAlive: Boolean) {
         Log.d("Silencer", "----> $url, isAlive: $isAlive")
-        val intent = Intent(SILENCER_EVENT).apply {
+        val intent = Intent(SILENCER_EVENT_OUT).apply {
             putExtra("address", url)
             putExtra("isAlive", isAlive)
             putExtra("event", EVENT_MESSAGE)
@@ -254,10 +253,22 @@ class SilencerService : Service() {
     }
 
     private fun sendStopEvent() {
-        val intent = Intent(SILENCER_EVENT).apply {
+        val intent = Intent(SILENCER_EVENT_OUT).apply {
             putExtra("event", EVENT_STOP)
         }
 
         sendBroadcast(intent)
+    }
+
+    private fun createStatusReceiver() = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent ?: return
+
+            handleSilencerMessage(intent)
+        }
+    }
+
+    private fun handleSilencerMessage(intent: Intent) {
+
     }
 }

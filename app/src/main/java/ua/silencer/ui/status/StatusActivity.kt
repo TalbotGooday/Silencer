@@ -32,7 +32,7 @@ class StatusActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        registerReceiver(silencerMessageReceiver, IntentFilter(SilencerService.SILENCER_EVENT))
+        registerReceiver(silencerMessageReceiver, IntentFilter(SilencerService.SILENCER_EVENT_OUT))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

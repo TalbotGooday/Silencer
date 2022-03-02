@@ -19,8 +19,11 @@ import ua.silencer.ui.status.StatusActivity
 
 class DashboardFragment : Fragment() {
     companion object {
-        const val URL_PATTERN =
-            "((http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?[a-zA-Z0-9]+([\\-\\.][a-zA-Z0-9]+)*\\.[a-zA-Z]{2,5}(:[0-9]{1,5})?(?:\\/?\\S*)?)|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+        private const val URL_PATTERN =
+            "(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?([a-zA-Z0-9]+([\\-\\.][a-zA-Z0-9]+)*\\.[a-zA-Z]{2,5}(:[0-9]{1,5})?(?:\\/?\\S*)?)"
+        private const val IP_PATTERN =
+            "((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.?){4}(?:\\:\\d{1,4})?)"
+        const val FIND_PATTERN = "$URL_PATTERN|$IP_PATTERN"
     }
 
     private lateinit var dashboardViewModel: DashboardViewModel
@@ -61,7 +64,7 @@ class DashboardFragment : Fragment() {
 
         val addressees = rawText
             .let { text ->
-                URL_PATTERN.toRegex().findAll(text).map { it.value }.toList()
+                FIND_PATTERN.toRegex().findAll(text).map { it.value }.toList()
             }
             .asSequence()
             .filter {
